@@ -1,0 +1,14 @@
+node_modules/
+dist/
+dist-electron/
+release/
+*.log
+.DS_Store
+services/stt-local/.venv/
+services/stt-local/__pycache__/
+**/__pycache__/
+.env
+*.local
+apps/desktop/release/
+apps/desktop/resources/python-runtime/
+apps/desktop/resources/.tmp-python/

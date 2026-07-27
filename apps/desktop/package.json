@@ -1,0 +1,97 @@
+{
+  "name": "@transcriber/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Live meeting transcriber desktop app",
+  "author": "Transcriber",
+  "homepage": "https://github.com/transcriber/transcriber",
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -p tsconfig.node.json --noEmit && vite build",
+    "start": "electron .",
+    "bundle:python": "node ../../scripts/bundle-python-runtime.mjs",
+    "pack": "npm run pack:win",
+    "pack:win": "npm run bundle:python && npm run build && electron-builder --win --x64 --projectDir . --config.directories.output=release/windows",
+    "pack:linux": "node ../../scripts/bundle-python-runtime.mjs --platform=linux && npm run build && electron-builder --linux AppImage deb --x64 --projectDir . --config.directories.output=release/linux",
+    "pack:linux:docker": "pwsh -File ../../scripts/pack-linux-docker.ps1"
+  },
+  "dependencies": {
+    "@transcriber/shared": "*",
+    "electron-store": "^8.2.0",
+    "ws": "^8.18.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "@types/ws": "^8.18.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "electron": "^34.3.0",
+    "electron-builder": "^25.1.8",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "typescript": "^5.8.2",
+    "vite": "^6.2.1",
+    "vite-plugin-electron": "^0.29.0",
+    "vite-plugin-electron-renderer": "^0.14.6"
+  },
+  "build": {
+    "appId": "com.transcriber.app",
+    "productName": "Transcriber",
+    "electronVersion": "34.3.0",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../../services/stt-local",
+        "to": "stt-local",
+        "filter": [
+          "**/*",
+          "!__pycache__/**",
+          "!.venv/**",
+          "!python-runtime/**"
+        ]
+      },
+      {
+        "from": "resources/python-runtime",
+        "to": "python-runtime",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "win": {
+      "signAndEditExecutable": false,
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "AudioVideo",
+      "maintainer": "Transcriber",
+      "synopsis": "Live meeting transcription with speaker labels",
+      "description": "Standalone live meeting transcriber with local/cloud engines and AI analysis.",
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    }
+  }
+}

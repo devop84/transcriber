@@ -1,0 +1,22 @@
+{
+  "name": "transcriber",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Standalone live meeting transcription with speaker diarization",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @transcriber/desktop",
+    "build": "npm run build -w @transcriber/shared && npm run build -w @transcriber/desktop",
+    "start": "npm run start -w @transcriber/desktop",
+    "pack": "npm run pack -w @transcriber/desktop",
+    "pack:win": "npm run pack:win -w @transcriber/desktop",
+    "pack:linux": "npm run pack:linux -w @transcriber/desktop",
+    "pack:linux:docker": "powershell -ExecutionPolicy Bypass -File scripts/pack-linux-docker.ps1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
