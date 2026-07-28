@@ -18,19 +18,28 @@ import {
   ensureModel,
   getModelStatus,
   listModelStatuses,
+  JsonFileSettingsStore,
 } from '@transcriber/core';
-import { SettingsStore } from './settings';
 import type { LocalModelSize } from '@transcriber/shared';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Separate userData from the Windows app (~/.config/Transcriber-Linux).
+app.setName('Transcriber-Linux');
 
 // Patch Chromium getDisplayMedia so audio:'loopback' works on Win/macOS/Linux.
 // Must run before app.ready. Renderer still calls enable/disable around capture.
 initAudioLoopback();
 
 let mainWindow: BrowserWindow | null = null;
-const settingsStore = new SettingsStore();
+let settingsStore: JsonFileSettingsStore | null = null;
 let sessionStore: SessionStore | null = null;
 let controller: SessionController | null = null;
+
+function ensureSettings() {
+  if (!settingsStore) settingsStore = new JsonFileSettingsStore();
+  return settingsStore;
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -38,7 +47,7 @@ function createWindow() {
     height: 800,
     minWidth: 980,
     minHeight: 600,
-    title: 'Transcriber',
+    title: 'Transcriber (Linux)',
     backgroundColor: '#1a1d21',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -48,7 +57,7 @@ function createWindow() {
     },
   });
 
-  const settings = settingsStore.get();
+  const settings = ensureSettings().get();
   mainWindow.setAlwaysOnTop(settings.alwaysOnTop);
 
   if (process.env.VITE_DEV_SERVER_URL) {
@@ -77,7 +86,7 @@ function ensureSessionStore() {
 function ensureController() {
   if (!controller) {
     controller = new SessionController({
-      settingsStore,
+      settingsStore: ensureSettings(),
       sessionStore: ensureSessionStore(),
       onPartial: (segment) => send('transcript:partial', segment),
       onFinal: (segment) => send('transcript:final', segment),
@@ -144,10 +153,10 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
 
-ipcMain.handle('settings:get', () => settingsStore.get());
+ipcMain.handle('settings:get', () => ensureSettings().get());
 
 ipcMain.handle('settings:set', (_e, patch: Partial<AppSettings>) => {
-  const next = settingsStore.set(patch);
+  const next = ensureSettings().set(patch);
   if (typeof patch.alwaysOnTop === 'boolean' && mainWindow) {
     mainWindow.setAlwaysOnTop(patch.alwaysOnTop);
   }
@@ -155,7 +164,7 @@ ipcMain.handle('settings:set', (_e, patch: Partial<AppSettings>) => {
 });
 
 ipcMain.handle('window:set-always-on-top', (_e, value: boolean) => {
-  settingsStore.set({ alwaysOnTop: value });
+  ensureSettings().set({ alwaysOnTop: value });
   mainWindow?.setAlwaysOnTop(value);
 });
 
@@ -163,11 +172,8 @@ ipcMain.handle('audio:list-devices', async () => {
   // Device enumeration happens in the renderer (mediaDevices).
   // Main returns loopback capability flag for UI.
   return {
-    // Loopback via electron-audio-loopback + (on Linux) Pulse/PipeWire monitor sources.
-    supportsLoopback:
-      process.platform === 'win32' ||
-      process.platform === 'darwin' ||
-      process.platform === 'linux',
+    // Linux-first app: Pulse/PipeWire monitors + electron-audio-loopback fallback.
+    supportsLoopback: true,
     platform: process.platform,
   };
 });
@@ -236,7 +242,7 @@ ipcMain.handle(
     _e,
     payload: { speakers: Speaker[]; segments: TranscriptSegment[] },
   ): Promise<ConversationAnalysis> => {
-    const settings = settingsStore.get();
+    const settings = ensureSettings().get();
     return analyzeConversation({
       apiKey: settings.aiApiKey,
       baseUrl: settings.aiBaseUrl,
@@ -253,12 +259,12 @@ ipcMain.handle('model:list', () => listModelStatuses());
 ipcMain.handle('model:status', (_e, model: LocalModelSize) => getModelStatus(model));
 
 ipcMain.handle('model:ensure', async (_e, model: LocalModelSize) => {
-  const settings = settingsStore.get();
+  const settings = ensureSettings().get();
   return ensureModel(model, { token: settings.huggingfaceToken });
 });
 
 ipcMain.handle('settings:pick-recording-folder', async () => {
-  const current = settingsStore.get().recordingFolder.trim();
+  const current = ensureSettings().get().recordingFolder.trim();
   const result = await dialog.showOpenDialog(mainWindow!, {
     title: 'Choose folder for session recordings',
     properties: ['openDirectory', 'createDirectory'],
@@ -268,10 +274,10 @@ ipcMain.handle('settings:pick-recording-folder', async () => {
     return { canceled: true as const };
   }
   const folder = result.filePaths[0];
-  settingsStore.set({ recordingFolder: folder });
+  ensureSettings().set({ recordingFolder: folder });
   return { canceled: false as const, folder };
 });
 
 ipcMain.handle('settings:clear-recording-folder', () => {
-  return settingsStore.set({ recordingFolder: '' });
+  return ensureSettings().set({ recordingFolder: '' });
 });

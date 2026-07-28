@@ -4,6 +4,8 @@
 
 Transcriber is an Electron app with a React renderer. Audio is captured and mixed in the renderer, then streamed as 16 kHz mono PCM to the main process. The main process owns session state, optional WAV recording, and the selected transcription engine.
 
+There are **two Electron shells**: `apps/desktop` (Windows) and `apps/desktop-linux` (Linux). Both reuse the React UI under `apps/desktop/src` and shared main-process logic in `packages/core` (plus `services/stt-local`).
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │ Renderer (React)                                            │
@@ -30,7 +32,9 @@ Transcriber is an Electron app with a React renderer. Audio is captured and mixe
 
 | Package / path | Role |
 |----------------|------|
-| `apps/desktop` | Electron shell, React UI, packaging config |
+| `apps/desktop` | Windows Electron shell, React UI source, Windows packaging |
+| `apps/desktop-linux` | Linux Electron shell; Vite aliases UI from `apps/desktop/src` |
+| `packages/core` | Session controller, engines, stores, model manager, AI analyzer |
 | `packages/shared` | Shared types, `DEFAULT_SETTINGS`, speaker helpers |
 | `services/stt-local` | Python sidecar (`server.py`, `download_model.py`) |
 
@@ -38,9 +42,9 @@ Transcriber is an Electron app with a React renderer. Audio is captured and mixe
 
 | Layer | Files | Notes |
 |-------|-------|-------|
-| Main | `electron/main.ts`, `session-controller.ts`, engines, stores | Privileged: spawn, FS, `electron-store`, dialogs |
+| Main | `electron/main.ts` (+ logic from `@transcriber/core`) | Privileged: spawn, FS, settings, dialogs |
 | Preload | `electron/preload.ts` | `contextIsolation: true`; exposes `window.transcriber` |
-| Renderer | `src/App.tsx`, `src/audio/AudioCapture.ts` | No Node integration |
+| Renderer | `apps/desktop/src/App.tsx`, `AudioCapture.ts` | Shared UI; no Node integration |
 
 ## Audio pipeline
 

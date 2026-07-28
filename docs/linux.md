@@ -1,6 +1,6 @@
 # Linux (run from source)
 
-Transcriber is **Windows-first**. On Linux the supported way to try it is **from source** — not AppImage.
+Transcriber ships a **separate Linux Electron app** at `apps/desktop-linux` (`@transcriber/desktop-linux`). The Windows app remains at `apps/desktop`. On Linux the supported way to try it is **from source** — not AppImage.
 
 For a full packaging / architecture overview see [development.md](development.md) and [architecture.md](architecture.md).
 
@@ -8,7 +8,7 @@ For a full packaging / architecture overview see [development.md](development.md
 
 | Feature | Linux (dev) |
 |---------|-------------|
-| UI, settings, history, export, AI panel | Yes |
+| UI, settings, history, export, AI panel | Yes (shared React UI from `apps/desktop/src`) |
 | Microphone live sessions | Yes (grant permission when prompted) |
 | **System audio** (Discord / Meet / Zoom) | **Yes** — PulseAudio / PipeWire **monitor** source, with Chromium loopback fallback |
 | Local Whisper / Cloud Deepgram | Yes (Local needs Python venv or first-run bootstrap) |
@@ -37,7 +37,7 @@ Check the **System** level meter while playing meeting audio. If it stays flat:
 | Python 3.10+ | Optional; only for **Local** Whisper (`--with-local`) |
 | Electron system libs | Most desktops already have them; if Electron fails to start, install your distro’s usual Electron/Chromium deps (e.g. GTK 3) |
 
-No Docker, no AppImage, no `pack:linux` required.
+No Docker, no AppImage, no `pack:linux` required for trying the app.
 
 ## Quick start (recommended)
 
@@ -52,8 +52,8 @@ That will:
 
 1. Check Node ≥ 20 and a display session  
 2. `npm install` if needed  
-3. Build `@transcriber/shared`  
-4. Start **`npm run dev`** (Vite + Electron)
+3. Build `@transcriber/shared` and `@transcriber/core`  
+4. Start **`npm run dev:linux`** (Vite on port **5174** + Electron for `@transcriber/desktop-linux`)
 
 ### Local Whisper in one go
 
@@ -70,7 +70,7 @@ Creates `services/stt-local/.venv` and installs `faster-whisper` + `numpy`. Firs
 ./scripts/run-linux-dev.sh --setup-only --with-local
 ```
 
-Then later: `npm run dev` or `./scripts/run-linux-dev.sh --skip-install`.
+Then later: `npm run dev:linux` or `./scripts/run-linux-dev.sh --skip-install`.
 
 ## Manual steps (same as the script)
 
@@ -80,7 +80,8 @@ cd transcriber
 
 npm install
 npm run build -w @transcriber/shared
-npm run dev
+npm run build -w @transcriber/core
+npm run dev:linux
 ```
 
 Optional Local STT:
@@ -115,21 +116,20 @@ cd ../..
 
 ## Data locations (Linux)
 
-Electron `userData` is typically under:
+Electron `userData` for the Linux app is typically under:
 
-`~/.config/Transcriber/`
+`~/.config/Transcriber-Linux/`
 
 | Data | Path |
 |------|------|
-| Settings | `~/.config/Transcriber/settings.json` (electron-store) |
-| Sessions | `~/.config/Transcriber/sessions/` |
-| Downloaded models / HF cache | `~/.config/Transcriber/hf-cache/` |
-| Fallback STT venv (if no project `.venv`) | `~/.config/Transcriber/stt-venv/` |
+| Settings | `~/.config/Transcriber-Linux/settings.json` (`JsonFileSettingsStore`) |
+| Sessions | `~/.config/Transcriber-Linux/sessions/` |
+| Downloaded models / HF cache | `~/.config/Transcriber-Linux/hf-cache/` |
+| Fallback STT venv (if no project `.venv`) | `~/.config/Transcriber-Linux/stt-venv/` |
 
 ## What we are not shipping (yet)
 
 - AppImage / “download this binary and run it”  
 - Flathub / Flatpak (future Linux product channel)  
-- A separate Linux-native shell (PipeWire monitor capture, etc.)
 
-For packaging experiments (maintainers only), see [development.md](development.md) — those paths are optional and not how friends should try the app.
+For packaging experiments on the Windows app shell (maintainers only), see [development.md](development.md) — those paths are optional and not how friends should try the Linux app.

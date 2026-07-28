@@ -8,7 +8,7 @@
 | npm | Workspaces (root `package.json`) |
 | Python | 3.10+ for local STT in **dev** without a bundled runtime |
 | Windows 10/11 x64 | Primary desktop target |
-| Linux | Try from source — see [linux.md](linux.md) (`scripts/run-linux-dev.sh`); no AppImage for testers |
+| Linux | Separate app `apps/desktop-linux` — see [linux.md](linux.md) (`scripts/run-linux-dev.sh` / `npm run dev:linux`); no AppImage for testers |
 | Docker (optional) | Linux packages from Windows via `pack:linux:docker` (maintainers) |
 
 ## Clone & install
@@ -17,13 +17,15 @@
 cd c:\Devop\transcriber   # or your clone path
 npm install
 npm run build -w @transcriber/shared
+npm run build -w @transcriber/core
 ```
 
-**Linux friends / contributors:** use [linux.md](linux.md) instead of packaging:
+**Linux friends / contributors:** use the Linux shell (`@transcriber/desktop-linux`) — see [linux.md](linux.md):
 
 ```bash
 ./scripts/run-linux-dev.sh
 ./scripts/run-linux-dev.sh --with-local   # Local Whisper venv
+# or: npm run dev:linux
 ```
 
 ### Optional: local STT venv (dev)
@@ -43,13 +45,23 @@ Requirements: `faster-whisper`, `numpy` (`services/stt-local/requirements.txt`).
 
 ## Run in development
 
+**Windows** (`apps/desktop`):
+
 ```bash
 npm run dev
+# or: npm run dev:win
 ```
 
 Runs Vite (renderer ~`http://localhost:5173`) and Electron via `vite-plugin-electron`. Main/preload rebuild on change.
 
-On Linux, `./scripts/run-linux-dev.sh` wraps install + this command.
+**Linux** (`apps/desktop-linux`):
+
+```bash
+npm run dev:linux
+# or: ./scripts/run-linux-dev.sh
+```
+
+Vite on port **5174**. Shared UI lives in `apps/desktop/src`; the Linux package only owns Electron main/preload.
 
 Useful checks:
 
@@ -60,10 +72,11 @@ Useful checks:
 ## Build (compile only)
 
 ```bash
-npm run build
+npm run build          # shared + core + Windows desktop
+npm run build:linux    # shared + core + desktop-linux
 ```
 
-Builds `@transcriber/shared` then `@transcriber/desktop` (`dist/` + `dist-electron/`).
+Builds `@transcriber/shared`, `@transcriber/core`, then the chosen Electron app (`dist/` + `dist-electron/`).
 
 ## Bundle Python runtime
 
@@ -139,43 +152,47 @@ Helper scripts (experimental / WSL): `scripts/pack-linux-wsl.sh`, `scripts/pack-
 
 | Script | Action |
 |--------|--------|
-| `npm run dev` | Desktop Vite + Electron |
-| `npm run build` | Shared + desktop production build |
-| `npm run start` | `electron .` against built desktop |
+| `npm run dev` / `dev:win` | Windows desktop Vite + Electron (:5173) |
+| `npm run dev:linux` | Linux desktop Vite + Electron (:5174) |
+| `npm run build` | Shared + core + Windows desktop |
+| `npm run build:linux` | Shared + core + desktop-linux |
+| `npm run start` | `electron .` against built Windows desktop |
 | `npm run pack` / `pack:win` | Windows installer |
-| `npm run pack:linux` | Linux AppImage + deb (on Linux) |
+| `npm run pack:linux` | Linux AppImage + deb from Windows shell (maintainers) |
 | `npm run pack:linux:docker` | Linux via Docker from Windows |
 
 ## Important paths
 
 | Path | Purpose |
 |------|---------|
-| `apps/desktop/src/` | React UI |
-| `apps/desktop/electron/` | Main, preload, engines, stores |
+| `apps/desktop/src/` | Shared React UI |
+| `apps/desktop/electron/` | Windows main / preload |
+| `apps/desktop-linux/electron/` | Linux main / preload (`JsonFileSettingsStore`) |
+| `packages/core/` | Shared session / STT / settings logic |
 | `apps/desktop/resources/python-runtime/` | Bundled Python (gitignored / generated) |
 | `services/stt-local/server.py` | Sidecar protocol |
 | `services/stt-local/download_model.py` | Model download with progress JSON |
 | `packages/shared/src/index.ts` | Types & defaults |
 | `apps/desktop/release/windows/` | Windows artifacts |
-| `apps/desktop/release/linux/` | Linux artifacts |
+| `apps/desktop/release/linux/` | Linux artifacts (maintainer pack experiments) |
 
 ### User data at runtime
 
 | Path | Contents |
 |------|----------|
-| `{userData}/settings.json` | electron-store settings |
+| `{userData}/settings.json` | Settings (electron-store on Windows; JSON file on Linux) |
 | `{userData}/sessions/` | History JSON |
 | `{userData}/hf-cache/` | Downloaded models |
 | `{userData}/stt-venv/` | Fallback venv |
 
-Windows `{userData}` ≈ `%APPDATA%\Transcriber`.
+Windows `{userData}` ≈ `%APPDATA%\Transcriber`. Linux ≈ `~/.config/Transcriber-Linux`.
 
 ## Desktop stack
 
 - Electron **34**
 - React **19** + Vite **6**
-- `electron-store`, `ws`
-- electron-builder **25** (NSIS / AppImage / deb)
+- `@transcriber/core`, `ws` (Windows also `electron-store`)
+- electron-builder **25** on Windows shell (NSIS; maintainer Linux pack optional)
 
 ## Testing checklist (manual)
 

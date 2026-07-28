@@ -4,7 +4,7 @@ Standalone desktop app for **live meeting transcription** with speaker labels. C
 
 | | |
 |---|---|
-| **Platforms** | Windows 10/11 (x64) primary; Linux via **from-source** (no AppImage) |
+| **Platforms** | Windows app (`apps/desktop`) + Linux app (`apps/desktop-linux`); Linux via **from-source** (no AppImage) |
 | **Engines** | Local (faster-whisper) or Cloud (Deepgram) |
 | **Install** | Windows: single installer with bundled Python + Whisper `base` |
 
@@ -13,7 +13,7 @@ Standalone desktop app for **live meeting transcription** with speaker labels. C
 | Guide | Contents |
 |-------|----------|
 | [User guide](docs/user-guide.md) | Install, live sessions, recording, history, troubleshooting |
-| [Linux (from source)](docs/linux.md) | Run on Linux as a developer — script + caveats |
+| [Linux (from source)](docs/linux.md) | Run `@transcriber/desktop-linux` — script + caveats |
 | [Settings reference](docs/settings-reference.md) | Every setting and default |
 | [Architecture](docs/architecture.md) | Electron layout, audio pipeline, STT, IPC |
 | [Development](docs/development.md) | Dev setup, packaging, scripts, paths |
@@ -28,16 +28,21 @@ Standalone desktop app for **live meeting transcription** with speaker labels. C
 
 ## Quick start (developer)
 
+**Windows:**
+
 ```bash
 npm install
 npm run build -w @transcriber/shared
+npm run build -w @transcriber/core
 npm run dev
+# or: npm run dev:win
 ```
 
 **Linux:** prefer the helper (no AppImage):
 
 ```bash
 ./scripts/run-linux-dev.sh
+# or: npm run dev:linux
 # Local Whisper:
 ./scripts/run-linux-dev.sh --with-local
 ```
@@ -64,8 +69,10 @@ npm run pack:win
 ## Project layout
 
 ```
-apps/desktop          Electron + React UI
+apps/desktop          Windows Electron shell + React UI source
+apps/desktop-linux    Linux Electron shell (reuses UI from apps/desktop/src)
 packages/shared       Shared TypeScript types & defaults
+packages/core         Shared main-process logic (sessions, engines, settings)
 services/stt-local    Python faster-whisper sidecar
 scripts/              Python bundling, Linux from-source runner, pack helpers
 docs/                 Full documentation
@@ -73,4 +80,4 @@ docs/                 Full documentation
 
 ## License / notes
 
-API keys (Deepgram, OpenAI-compatible, optional Hugging Face) are stored locally via `electron-store`. See [docs/user-guide.md](docs/user-guide.md) for audio caveats and [docs/development.md](docs/development.md) for packaging details.
+API keys (Deepgram, OpenAI-compatible, optional Hugging Face) are stored locally. Windows uses `electron-store`; Linux uses `JsonFileSettingsStore` under `~/.config/Transcriber-Linux/`. See [docs/user-guide.md](docs/user-guide.md) for audio caveats and [docs/development.md](docs/development.md) for packaging details.

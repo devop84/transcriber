@@ -1,9 +1,11 @@
 import Store from 'electron-store';
 import { AppSettings, DEFAULT_SETTINGS } from '@transcriber/shared';
+import type { SettingsStore as SettingsStoreInterface } from '@transcriber/core';
 
 type Schema = { settings: AppSettings };
 
-export class SettingsStore {
+/** Electron-store backed settings (Windows-compatible). Implements core SettingsStore. */
+export class SettingsStore implements SettingsStoreInterface {
   private store: Store<Schema>;
 
   constructor() {

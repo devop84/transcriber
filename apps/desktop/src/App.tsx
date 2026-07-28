@@ -9,7 +9,7 @@ import type {
 } from '@transcriber/shared';
 import { DEFAULT_SETTINGS, EMPTY_ANALYSIS } from '@transcriber/shared';
 import { AudioCapture } from './audio/AudioCapture';
-import type { SessionStatus, ModelStatus, ModelProgressEvent } from '../electron/preload';
+import type { SessionStatus, ModelStatus, ModelProgressEvent } from '@transcriber/core';
 
 type Tab = 'session' | 'history' | 'settings';
 

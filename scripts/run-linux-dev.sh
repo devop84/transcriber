@@ -2,7 +2,7 @@
 # Run Transcriber from source on Linux (dev). No AppImage / packaging.
 #
 # Usage:
-#   ./scripts/run-linux-dev.sh              # install deps if needed, then npm run dev
+#   ./scripts/run-linux-dev.sh              # install deps if needed, then npm run dev:linux
 #   ./scripts/run-linux-dev.sh --with-local # also create services/stt-local/.venv
 #   ./scripts/run-linux-dev.sh --setup-only # deps (+ optional venv), do not start the app
 #   ./scripts/run-linux-dev.sh --skip-install
@@ -31,7 +31,7 @@ for arg in "$@"; do
 done
 
 if [[ "$(uname -s)" != "Linux" ]]; then
-  echo "This script is for Linux. On Windows use: npm run dev" >&2
+  echo "This script is for Linux. On Windows use: npm run dev:win" >&2
   exit 1
 fi
 
@@ -67,8 +67,10 @@ if [[ "$SKIP_INSTALL" -eq 0 ]]; then
   fi
   log "building @transcriber/shared…"
   npm run build -w @transcriber/shared
+  log "building @transcriber/core…"
+  npm run build -w @transcriber/core
 else
-  log "skipping npm install / shared build (--skip-install)"
+  log "skipping npm install / package builds (--skip-install)"
 fi
 
 if [[ "$WITH_LOCAL" -eq 1 ]]; then
@@ -89,10 +91,10 @@ else
 fi
 
 if [[ "$SETUP_ONLY" -eq 1 ]]; then
-  log "setup done. Start with: npm run dev   (or re-run this script without --setup-only)"
+  log "setup done. Start with: npm run dev:linux   (or re-run this script without --setup-only)"
   exit 0
 fi
 
-log "starting Electron + Vite (npm run dev)…"
+log "starting Electron + Vite (npm run dev:linux → @transcriber/desktop-linux on :5174)…"
 log "system audio: uses Pulse/PipeWire monitor sources when available (Discord/Meet playback)."
-exec npm run dev
+exec npm run dev:linux

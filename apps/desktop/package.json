@@ -17,6 +17,7 @@
     "pack:linux:docker": "pwsh -File ../../scripts/pack-linux-docker.ps1"
   },
   "dependencies": {
+    "@transcriber/core": "*",
     "@transcriber/shared": "*",
     "electron-audio-loopback": "^1.0.6",
     "electron-store": "^8.2.0",

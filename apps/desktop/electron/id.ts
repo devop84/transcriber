@@ -1,5 +1,1 @@
-import { randomUUID } from 'node:crypto';
-
-export function newId(): string {
-  return randomUUID();
-}
+export { newId } from '@transcriber/core';
