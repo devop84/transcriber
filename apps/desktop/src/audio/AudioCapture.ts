@@ -1,6 +1,10 @@
 /**
  * Capture microphone + optional system loopback, mix to 16 kHz mono PCM,
  * and stream chunks to the Electron main process.
+ *
+ * System audio strategy:
+ * 1. Linux: PulseAudio / PipeWire sink monitor via getUserMedia (no picker)
+ * 2. All platforms: Chromium display-media loopback (electron-audio-loopback)
  */
 export class AudioCapture {
   private audioCtx: AudioContext | null = null;
@@ -17,7 +21,7 @@ export class AudioCapture {
 
   async listMics(): Promise<MediaDeviceInfo[]> {
     const devices = await navigator.mediaDevices.enumerateDevices();
-    return devices.filter((d) => d.kind === 'audioinput');
+    return devices.filter((d) => d.kind === 'audioinput' && !isMonitorDevice(d));
   }
 
   async start(opts: {
@@ -52,22 +56,11 @@ export class AudioCapture {
 
     let systemSource: MediaStreamAudioSourceNode | null = null;
     if (opts.systemAudioEnabled) {
-      try {
-        this.systemStream = await navigator.mediaDevices.getDisplayMedia({
-          video: true,
-          audio: true,
-        } as DisplayMediaStreamOptions);
-        this.systemStream.getVideoTracks().forEach((t) => t.stop());
-        if (this.systemStream.getAudioTracks().length === 0) {
-          console.warn('No system audio track; continuing with mic only');
-          this.systemStream.getTracks().forEach((t) => t.stop());
-          this.systemStream = null;
-        } else {
-          systemSource = ctx.createMediaStreamSource(this.systemStream);
-        }
-      } catch (err) {
-        console.warn('System audio capture unavailable', err);
-        this.systemStream = null;
+      this.systemStream = await captureSystemAudio();
+      if (this.systemStream) {
+        systemSource = ctx.createMediaStreamSource(this.systemStream);
+      } else {
+        console.warn('No system audio track; continuing with mic only');
       }
     }
 
@@ -138,7 +131,10 @@ export class AudioCapture {
         const frame = merged.subarray(offset, offset + frameSize);
         const pcm = floatTo16BitPCM(frame);
         // Copy buffer — Int16Array.buffer can be transferred/detached by IPC.
-        const copy = pcm.buffer.slice(pcm.byteOffset, pcm.byteOffset + pcm.byteLength);
+        const copy = pcm.buffer.slice(
+          pcm.byteOffset,
+          pcm.byteOffset + pcm.byteLength,
+        ) as ArrayBuffer;
         opts.onChunk(copy, lastMic, lastSys);
         offset += frameSize;
       }
@@ -177,6 +173,96 @@ export class AudioCapture {
       this.audioCtx = null;
     }
   }
+}
+
+/** PulseAudio / PipeWire playback monitors show up as capture devices. */
+function isMonitorDevice(d: MediaDeviceInfo): boolean {
+  const label = d.label || '';
+  return (
+    /monitor of/i.test(label) ||
+    /\.monitor\b/i.test(label) ||
+    /\bmonitor\b/i.test(label)
+  );
+}
+
+function pickMonitorDevice(devices: MediaDeviceInfo[]): MediaDeviceInfo | null {
+  const monitors = devices.filter((d) => d.kind === 'audioinput' && isMonitorDevice(d));
+  if (monitors.length === 0) return null;
+  // Prefer the default sink monitor when the label looks like speakers/headphones.
+  const preferred =
+    monitors.find((d) => /speaker|headphone|output|analog|hdmi|built-in/i.test(d.label)) ??
+    monitors[0];
+  return preferred;
+}
+
+async function captureViaMonitorSource(): Promise<MediaStream | null> {
+  // Mic permission already granted — labels should be populated.
+  const devices = await navigator.mediaDevices.enumerateDevices();
+  const monitor = pickMonitorDevice(devices);
+  if (!monitor?.deviceId) return null;
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        deviceId: { exact: monitor.deviceId },
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false,
+        channelCount: 1,
+      },
+      video: false,
+    });
+    if (stream.getAudioTracks().length === 0) {
+      stream.getTracks().forEach((t) => t.stop());
+      return null;
+    }
+    console.info('[audio] system capture via monitor source:', monitor.label);
+    return stream;
+  } catch (err) {
+    console.warn('Monitor source capture failed', err);
+    return null;
+  }
+}
+
+async function captureViaDisplayLoopback(): Promise<MediaStream | null> {
+  const api = window.transcriber;
+  try {
+    await api.enableLoopbackAudio();
+    const stream = await navigator.mediaDevices.getDisplayMedia({
+      video: true,
+      audio: true,
+    } as DisplayMediaStreamOptions);
+    stream.getVideoTracks().forEach((t) => {
+      t.stop();
+      stream.removeTrack(t);
+    });
+    if (stream.getAudioTracks().length === 0) {
+      stream.getTracks().forEach((t) => t.stop());
+      return null;
+    }
+    console.info('[audio] system capture via display-media loopback');
+    return stream;
+  } catch (err) {
+    console.warn('Display-media loopback unavailable', err);
+    return null;
+  } finally {
+    try {
+      await api.disableLoopbackAudio();
+    } catch {
+      // ignore
+    }
+  }
+}
+
+async function captureSystemAudio(): Promise<MediaStream | null> {
+  // Linux: monitor sources are the reliable path for Discord/Meet/Zoom playback.
+  const viaMonitor = await captureViaMonitorSource();
+  if (viaMonitor) return viaMonitor;
+
+  const viaLoopback = await captureViaDisplayLoopback();
+  if (viaLoopback) return viaLoopback;
+
+  return null;
 }
 
 function rmsFloat(data: Float32Array): number {

@@ -2,12 +2,12 @@ import {
   app,
   BrowserWindow,
   ipcMain,
-  desktopCapturer,
   session as electronSession,
   dialog,
 } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { initMain as initAudioLoopback } from 'electron-audio-loopback';
 import type { AppSettings, ConversationAnalysis, Speaker, TranscriptSegment } from '@transcriber/shared';
 import { SettingsStore } from './settings';
 import { SessionStore } from './session-store';
@@ -20,6 +20,10 @@ import {
 } from './model-manager';
 import type { LocalModelSize } from '@transcriber/shared';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Patch Chromium getDisplayMedia so audio:'loopback' works on Win/macOS/Linux.
+// Must run before app.ready. Renderer still calls enable/disable around capture.
+initAudioLoopback();
 
 let mainWindow: BrowserWindow | null = null;
 const settingsStore = new SettingsStore();
@@ -104,16 +108,7 @@ app.whenReady().then(() => {
     },
   );
 
-  // Allow Chromium desktop capture for system audio loopback on Windows.
-  electronSession.defaultSession.setDisplayMediaRequestHandler(
-    async (_request, callback) => {
-      const sources = await desktopCapturer.getSources({
-        types: ['screen'],
-        thumbnailSize: { width: 1, height: 1 },
-      });
-      callback({ video: sources[0], audio: 'loopback' });
-    },
-  );
+  // Display-media loopback handler is owned by electron-audio-loopback (initMain).
 
   createWindow();
 
@@ -146,7 +141,11 @@ ipcMain.handle('audio:list-devices', async () => {
   // Device enumeration happens in the renderer (mediaDevices).
   // Main returns loopback capability flag for UI.
   return {
-    supportsLoopback: process.platform === 'win32' || process.platform === 'darwin',
+    // Loopback via electron-audio-loopback + (on Linux) Pulse/PipeWire monitor sources.
+    supportsLoopback:
+      process.platform === 'win32' ||
+      process.platform === 'darwin' ||
+      process.platform === 'linux',
     platform: process.platform,
   };
 });

@@ -4,15 +4,16 @@ Standalone desktop app for **live meeting transcription** with speaker labels. C
 
 | | |
 |---|---|
-| **Platforms** | Windows 10/11 (x64) primary; Linux packages optional |
+| **Platforms** | Windows 10/11 (x64) primary; Linux via **from-source** (no AppImage) |
 | **Engines** | Local (faster-whisper) or Cloud (Deepgram) |
-| **Install** | Single installer with bundled Python + Whisper `base` |
+| **Install** | Windows: single installer with bundled Python + Whisper `base` |
 
 ## Documentation
 
 | Guide | Contents |
 |-------|----------|
 | [User guide](docs/user-guide.md) | Install, live sessions, recording, history, troubleshooting |
+| [Linux (from source)](docs/linux.md) | Run on Linux as a developer — script + caveats |
 | [Settings reference](docs/settings-reference.md) | Every setting and default |
 | [Architecture](docs/architecture.md) | Electron layout, audio pipeline, STT, IPC |
 | [Development](docs/development.md) | Dev setup, packaging, scripts, paths |
@@ -32,6 +33,16 @@ npm install
 npm run build -w @transcriber/shared
 npm run dev
 ```
+
+**Linux:** prefer the helper (no AppImage):
+
+```bash
+./scripts/run-linux-dev.sh
+# Local Whisper:
+./scripts/run-linux-dev.sh --with-local
+```
+
+See [docs/linux.md](docs/linux.md).
 
 Windows installer:
 
@@ -56,7 +67,7 @@ npm run pack:win
 apps/desktop          Electron + React UI
 packages/shared       Shared TypeScript types & defaults
 services/stt-local    Python faster-whisper sidecar
-scripts/              Python bundling & Linux pack helpers
+scripts/              Python bundling, Linux from-source runner, pack helpers
 docs/                 Full documentation
 ```
 

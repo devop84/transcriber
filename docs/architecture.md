@@ -45,7 +45,7 @@ Transcriber is an Electron app with a React renderer. Audio is captured and mixe
 ## Audio pipeline
 
 1. **Mic** — `navigator.mediaDevices.getUserMedia` (optional device id).
-2. **System** — `getDisplayMedia` with audio; main process `setDisplayMediaRequestHandler` supplies `audio: 'loopback'` on Windows (and capability flag for Darwin).
+2. **System** — Pulse/PipeWire **monitor** source via `getUserMedia` when available (Linux); else `getDisplayMedia` with `electron-audio-loopback` (`audio: 'loopback'`).  
 3. **Mix** — Web Audio: both sources into a gain node → `ScriptProcessorNode` (4096 samples).
 4. **Resample** — Downsample to **16 kHz**, convert float → **int16 PCM**, ~250 ms frames.
 5. **IPC** — `audio:pcm-chunk` → `SessionController.pushAudio`.

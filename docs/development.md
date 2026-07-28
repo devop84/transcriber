@@ -8,7 +8,8 @@
 | npm | Workspaces (root `package.json`) |
 | Python | 3.10+ for local STT in **dev** without a bundled runtime |
 | Windows 10/11 x64 | Primary desktop target |
-| Docker (optional) | Linux packages from Windows via `pack:linux:docker` |
+| Linux | Try from source — see [linux.md](linux.md) (`scripts/run-linux-dev.sh`); no AppImage for testers |
+| Docker (optional) | Linux packages from Windows via `pack:linux:docker` (maintainers) |
 
 ## Clone & install
 
@@ -16,6 +17,13 @@
 cd c:\Devop\transcriber   # or your clone path
 npm install
 npm run build -w @transcriber/shared
+```
+
+**Linux friends / contributors:** use [linux.md](linux.md) instead of packaging:
+
+```bash
+./scripts/run-linux-dev.sh
+./scripts/run-linux-dev.sh --with-local   # Local Whisper venv
 ```
 
 ### Optional: local STT venv (dev)
@@ -26,6 +34,7 @@ If you are not using `apps/desktop/resources/python-runtime` yet:
 cd services/stt-local
 python -m venv .venv
 .\.venv\Scripts\activate          # Windows
+# source .venv/bin/activate       # Linux / macOS
 pip install -r requirements.txt
 cd ../..
 ```
@@ -39,6 +48,8 @@ npm run dev
 ```
 
 Runs Vite (renderer ~`http://localhost:5173`) and Electron via `vite-plugin-electron`. Main/preload rebuild on change.
+
+On Linux, `./scripts/run-linux-dev.sh` wraps install + this command.
 
 Useful checks:
 
@@ -94,7 +105,9 @@ Installer includes `stt-local` + `python-runtime` as `extraResources`.
 
 ## Package Linux
 
-Linux targets need a Linux environment (native, WSL, or Docker). Building the Linux Python runtime **from Windows** is blocked by `bundle-python-runtime.mjs`.
+**Testers / friends:** do not use these pack scripts — run from source with [linux.md](linux.md) (`./scripts/run-linux-dev.sh`). No AppImage.
+
+Maintainers only: Linux targets need a Linux environment (native, WSL, or Docker). Building the Linux Python runtime **from Windows** is blocked by `bundle-python-runtime.mjs`.
 
 ### Docker (recommended from Windows)
 

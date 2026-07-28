@@ -40,6 +40,10 @@ const api = {
     ipcRenderer.invoke('window:set-always-on-top', value),
   listAudioCapability: (): Promise<{ supportsLoopback: boolean; platform: string }> =>
     ipcRenderer.invoke('audio:list-devices'),
+  enableLoopbackAudio: (): Promise<void> =>
+    ipcRenderer.invoke('enable-loopback-audio'),
+  disableLoopbackAudio: (): Promise<void> =>
+    ipcRenderer.invoke('disable-loopback-audio'),
   startSession: (opts?: { micDeviceId?: string }): Promise<SessionStatus> =>
     ipcRenderer.invoke('session:start', opts),
   stopSession: (): Promise<SessionStatus> => ipcRenderer.invoke('session:stop'),

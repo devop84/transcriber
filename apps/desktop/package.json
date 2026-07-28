@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@transcriber/shared": "*",
+    "electron-audio-loopback": "^1.0.6",
     "electron-store": "^8.2.0",
     "ws": "^8.18.1"
   },
